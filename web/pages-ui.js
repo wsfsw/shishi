@@ -3,20 +3,49 @@
  const localLink='<a class="button primary" href="http://127.0.0.1:4317/#settings" target="_blank" rel="noopener noreferrer">连接本机微信</a>';
  const repoLink='<a class="text-button" href="https://github.com/wsfsw/shishi" target="_blank" rel="noopener noreferrer">查看仓库与运行说明 ↗</a>';
  const notice=document.createElement('aside');notice.className='pages-notice';notice.setAttribute('aria-label','网页版功能范围');
- notice.innerHTML='<div><strong>你的事务工作台</strong><p>记录保存在当前浏览器。连接自己的 DeepSeek 后可整理文字、制定方案与复盘；微信后台读取由本机版完成。关闭页面后停止提醒。</p></div><button class="button secondary" data-go="settings">连接微信 / DeepSeek</button>';
+ notice.innerHTML='<div><strong>你的事务工作台</strong><p>记录保存在当前浏览器。微信、DeepSeek 的连接和桌面版下载都在设置中。关闭页面后，网页提醒暂停。</p></div><button class="button secondary" data-go="settings">打开设置</button>';
  document.querySelector('#content').before(notice);
- labels.settings='连接设置';
- const settingsNav=document.querySelector('[data-view="settings"]');settingsNav.setAttribute('aria-label','连接设置');settingsNav.title='连接设置';settingsNav.querySelector('.rail-label').textContent='连接设置';
+ labels.settings='设置';
+ paths.settings='M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14 M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M5 19l2-2 M17 7l2-2';
+ paths.download='M12 3v12 M7 10l5 5 5-5 M4 16v5h16v-5';
+ const settingsNav=document.querySelector('[data-view="settings"]');settingsNav.setAttribute('aria-label','设置');settingsNav.title='设置';settingsNav.querySelector('.rail-label').textContent='设置';settingsNav.querySelector('.nav-icon').innerHTML=icon('settings');
  renderSettings=()=>{
   const ai=state.settings.ai;
-  return header('把工具连接到你的工作台','连接设置','微信在自己的电脑上读取，DeepSeek 使用你自己的 API Key。')+`<div class="pages-connections"><section class="panel pages-local-panel"><div class="pages-connection-heading"><span class="chip tone-mint">微信</span><span class="muted">Windows 本机连接</span></div><h2>连接本机微信</h2><p>首次下载、解压并启动桌面版，之后点击按钮即可进入本机连接页。微信保持登录；在桌面版选择群聊、日期和信息类型并保存。</p><div class="head-actions">${localLink}<a class="button secondary" href="shishi://connect">启动桌面程序</a></div><p class="hint">首次使用请先解压并启动拾事。主按钮只打开本机网页；若服务尚未启动，可使用下方“启动桌面程序”，浏览器可能询问是否打开拾事。桌面版在托盘持续运行，关闭页面后仍可整理和提醒。微信连接是否成功以桌面版的真实读取状态为准。</p><a class="button secondary" href="https://github.com/wsfsw/shishi/releases/latest/download/Shishi-Windows.zip">下载 Windows 桌面版</a><p class="hint">网页方案与复盘只需 DeepSeek，不需要微信，也不需要安装桌面版。</p>${repoLink}</section><section class="panel pages-local-panel"><div class="pages-connection-heading"><span class="chip tone-sky">DeepSeek</span><span class="pages-connection-state ${ai.configured?'connected':''}">${ai.configured?'已验证连接':'尚未连接'}</span></div><h2>用自己的 AI 整理</h2><p>输入 API Key，点击连接即可验证。密钥只保留在当前页面内存中；刷新或关闭页面后需要重新输入。</p><form id="pages-ai-form"><label for="pages-api-key">DeepSeek API Key<input id="pages-api-key" name="apiKey" type="password" autocomplete="off" spellcheck="false" maxlength="200" required placeholder="粘贴自己的 API Key" aria-describedby="pages-key-help pages-ai-error"></label><label for="pages-model">整理模型<select id="pages-model" name="model"><option value="deepseek-flash" ${ai.model==='deepseek-flash'?'selected':''}>DeepSeek V4.1 Flash</option><option value="deepseek-v4-pro" ${ai.model==='deepseek-v4-pro'?'selected':''}>DeepSeek V4 Pro</option></select></label><p id="pages-key-help" class="hint">连接会向 DeepSeek 发送一条测试请求，可能产生少量 API 费用。整理与复盘时发送你提交的资料、方案和执行反馈；不会把密钥发给 GitHub 或写入事务记录。</p><div class="head-actions"><button class="button primary" type="submit">${ai.configured?'更换并验证连接':'连接 DeepSeek'}</button>${ai.configured?'<button class="button secondary" type="button" data-pages-ai-disconnect>断开连接</button><button class="button secondary" type="button" data-import>开始整理文字</button>':''}</div><p id="pages-ai-error" class="error" role="alert"></p></form>${ai.configured?'<p class="hint">当前模型：'+esc(ai.model)+' · 连接已通过验证</p>':''}</section></div>`;
+  return header('让拾事适合你的使用方式','设置','管理工具连接，下载桌面版。网页方案与复盘只需连接 DeepSeek。')+
+  `<nav class="pages-settings-nav" aria-label="设置分类"><button class="button secondary" data-settings-section="pages-wechat">微信连接</button><button class="button secondary" data-settings-section="pages-deepseek">DeepSeek 连接</button><button class="button secondary" data-settings-section="pages-desktop">桌面版下载</button></nav>
+  <div class="pages-connections">
+   <section class="panel pages-local-panel" id="pages-wechat" tabindex="-1" aria-labelledby="pages-wechat-title">
+    <div class="pages-connection-heading"><span class="chip tone-mint">微信连接</span><span class="muted">Windows 本机</span></div>
+    <h2 id="pages-wechat-title">连接自己的微信</h2><p>保持微信登录，启动拾事桌面版后连接。在本机页面选择群聊、日期和信息类型，再保存设置。</p>
+    <div class="head-actions">${localLink}<a class="button secondary" href="shishi://connect">启动桌面程序</a></div>
+    <p class="hint">主按钮打开本机连接页。服务未启动时，可先启动桌面程序；浏览器可能询问是否打开拾事。连接结果以本机页面的真实读取状态为准。</p>
+    <button class="text-button pages-download-jump" data-settings-section="pages-desktop">首次使用？下载桌面版 ↓</button>
+   </section>
+   <section class="panel pages-local-panel" id="pages-deepseek" tabindex="-1" aria-labelledby="pages-deepseek-title">
+    <div class="pages-connection-heading"><span class="chip tone-sky">DeepSeek 连接</span><span class="pages-connection-state ${ai.configured?'connected':''}">${ai.configured?'已验证连接':'尚未连接'}</span></div>
+    <h2 id="pages-deepseek-title">输入 API Key，连接自己的 AI</h2><p>连接后即可整理文字、生成方案和复盘，无需连接微信。密钥只保留在当前页面内存中，刷新或关闭后需重新输入。</p>
+    <form id="pages-ai-form"><label for="pages-api-key">DeepSeek API Key<input id="pages-api-key" name="apiKey" type="password" autocomplete="off" spellcheck="false" maxlength="200" required placeholder="粘贴自己的 API Key" aria-describedby="pages-key-help pages-ai-error"></label>
+    <label for="pages-model">整理模型<select id="pages-model" name="model"><option value="deepseek-flash" ${ai.model==='deepseek-flash'?'selected':''}>DeepSeek V4.1 Flash</option><option value="deepseek-v4-pro" ${ai.model==='deepseek-v4-pro'?'selected':''}>DeepSeek V4 Pro</option></select></label>
+    <p id="pages-key-help" class="hint">连接会向 DeepSeek 发送测试请求，可能产生少量 API 费用。整理时发送你提交的资料和反馈；密钥不会上传到 GitHub 或写入事务记录。</p>
+    <div class="head-actions"><button class="button primary" type="submit">${ai.configured?'更换并验证连接':'连接 DeepSeek'}</button>${ai.configured?'<button class="button secondary" type="button" data-pages-ai-disconnect>断开连接</button><button class="button secondary" type="button" data-import>开始整理文字</button>':''}</div><p id="pages-ai-error" class="error" role="alert"></p></form>
+    ${ai.configured?'<p class="hint">当前模型：'+esc(ai.model)+' · 连接已通过验证</p>':''}
+   </section>
+  </div>
+  <section class="panel pages-local-panel pages-desktop-panel" id="pages-desktop" tabindex="-1" aria-labelledby="pages-desktop-title">
+   <div class="pages-desktop-copy"><div class="pages-connection-heading"><span class="chip tone-lilac">桌面版下载</span><span class="muted">Windows 64 位 · ZIP 压缩包</span></div>
+   <h2 id="pages-desktop-title">把拾事留在桌面上</h2><p>桌面版在托盘持续运行，提供本机微信整理、日历和电脑提醒。关闭网页后，本机服务仍可工作。</p>
+   <div class="head-actions"><a id="pages-desktop-download" class="button primary" href="https://github.com/wsfsw/shishi/releases/latest/download/Shishi-Windows.zip" download="Shishi-Windows.zip">${icon('download')}直接下载 Windows 桌面版</a><a class="button secondary" href="https://github.com/wsfsw/shishi/releases/latest" target="_blank" rel="noopener noreferrer">版本与备用下载 ↗</a></div>
+   <p class="hint">点击直接下载压缩包；下载由 GitHub 提供。包含运行环境，无需另外安装 Node 或 Python。</p>${repoLink}</div>
+   <ol class="pages-install-steps" aria-label="桌面版使用步骤"><li><strong>下载并解压</strong><span>保存到固定文件夹，将整个压缩包解压。</span></li><li><strong>启动 Shishi.exe</strong><span>双击程序，拾事将驻留在 Windows 托盘。</span></li><li><strong>返回设置连接</strong><span>点击“连接本机微信”，选择要整理的群聊。</span></li></ol>
+  </section>`;
+
  };
  renderNotifications=()=>header('页面打开时，及时想起','提醒','这里只记录当前浏览器的事务提醒；关闭页面不再检查，全天事项按北京时间 09:00 提醒。')+'<div class="panel">'+(state.notifications.length?state.notifications.map(n=>'<div class="notification-row"><div class="task-main"><h3>'+esc(n.title)+'</h3><p>'+esc(n.body)+'</p><div class="task-meta">'+fmt(n.created_at)+(n.read?'':' · 未读')+'</div></div>'+(n.read?'':'<button class="text-button" data-read="'+esc(n.id)+'">已读</button>')+'</div>').join(''):empty('目前没有网页提醒','新增带日期的事务并确认加入日历，保持页面打开即可检查提醒。'))+'</div>';
  const originalDraw=draw;
  draw=()=>{
   originalDraw();
   for(const b of document.querySelectorAll('[data-file-import],[data-test]')){b.disabled=true;b.title='需要 Windows 本机版';}
-  for(const b of document.querySelectorAll('[data-import]')){b.disabled=!state.settings.ai.configured;b.title=b.disabled?'先在连接设置中连接 DeepSeek':'只整理你主动提交的文字';if(b.textContent==='整理聊天')b.textContent='AI 整理文字';}
+  for(const b of document.querySelectorAll('[data-import]')){b.disabled=!state.settings.ai.configured;b.title=b.disabled?'先在设置中连接 DeepSeek':'只整理你主动提交的文字';if(b.textContent==='整理聊天')b.textContent='AI 整理文字';}
   const message=document.querySelector('.inbox-collection .empty p');if(message&&!taskQuery.trim()&&inboxType==='全部'&&filter==='inbox')message.textContent='点击“新增事务”开始记录；数据只保存在当前浏览器。';
  };
  document.querySelector('.sidebar-foot').innerHTML='<span class="local-dot"></span><span>网页本地</span>';
@@ -25,6 +54,7 @@
  document.querySelector('#problem-form [name=material]').closest('label').firstChild.textContent='文字资料（可选，TXT / MD / CSV，1MB 内）';
  document.querySelector('#import-form .hint').textContent='点击整理会将这里的文字发送给你连接的 DeepSeek，可能产生 API 费用。全部结果先进入事务箱，核对后再加入日历。可以暂停或结束未完成整理。';
  document.querySelector('#import-form button[type="submit"]').textContent='发送给 DeepSeek 并整理';
+ document.addEventListener('click',event=>{const button=event.target.closest('[data-settings-section]');if(!button)return;const section=document.getElementById(button.dataset.settingsSection);if(!section)return;section.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});section.focus({preventScroll:true});});
  document.addEventListener('input',event=>{if(event.target.closest('#pages-ai-form'))settingsDirty=true;});
  document.addEventListener('submit',async event=>{
   if(event.target.id!=='pages-ai-form')return;event.preventDefault();const form=event.target,button=form.querySelector('[type="submit"]'),error=form.querySelector('[role="alert"]');

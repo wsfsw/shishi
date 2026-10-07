@@ -8,6 +8,19 @@
 .pages-connection-state{font-size:13px;color:var(--ui-muted)}.pages-connection-state.connected{color:#237064;font-weight:700}
 #pages-ai-form label{display:block;margin-top:18px;font-weight:650}#pages-ai-form input,#pages-ai-form select{display:block;width:100%;min-height:46px;margin-top:8px;padding:10px 12px;border:1px solid var(--ui-line);border-radius:10px;background:var(--ui-soft);color:var(--ui-type);font:inherit}
 .pages-local-panel .head-actions{display:flex;flex-wrap:wrap;gap:10px}
+.reference-layout .pages-settings-nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:10px;margin:0 0 22px}
+.reference-layout .pages-settings-nav .button{min-height:44px;width:auto;flex:0 0 auto}
+.pages-local-panel[id]{scroll-margin-top:100px}
+.pages-download-jump{margin-top:12px;min-height:44px}
+.pages-desktop-panel{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);gap:32px;margin-top:24px;align-items:center}
+.pages-desktop-panel .head-actions a{display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;min-height:46px}
+.pages-install-steps{list-style:none;counter-reset:install;padding:0;margin:0;display:grid;gap:20px}
+.pages-install-steps li{counter-increment:install;position:relative;padding-left:46px}
+.pages-install-steps li:before{content:counter(install);position:absolute;left:0;top:0;display:grid;place-items:center;width:32px;height:32px;background:var(--ui-soft);border:1px solid var(--ui-line);color:var(--ui-type);border-radius:10px;font-weight:750}
+.pages-install-steps strong{display:block;color:var(--ui-type);font-size:15px}
+.pages-install-steps span{display:block;color:var(--ui-muted);font-size:13px;line-height:1.8;margin-top:4px}
+.pages-local-panel:focus-visible,.pages-settings-nav button:focus-visible,.pages-desktop-panel a:focus-visible{outline:3px solid var(--ui-type);outline-offset:4px}
 @media(max-width:1000px){.pages-connections{grid-template-columns:1fr}}
+@media(max-width:800px){.pages-desktop-panel{grid-template-columns:1fr;gap:24px}.pages-local-panel[id]{scroll-margin-top:80px}}
 @media(max-width:800px){.reference-layout .pages-notice{margin:14px 24px 0;flex-direction:column;align-items:flex-start;gap:0}.pages-notice a{font-size:12px}}
 @media(max-width:600px){.reference-layout .pages-notice{margin:12px 14px 0;padding:12px}.pages-local-panel{padding:18px}.pages-local-panel .head-actions{flex-wrap:wrap}}
