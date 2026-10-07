@@ -14,7 +14,7 @@
 
 网页可以使用访问者主动填写的 DeepSeek API Key，直接请求官方接口整理粘贴的文字、生成方案、排期与复盘，无需微信或代理服务器。密钥仅保留在当前页面内存，刷新或关闭即清除。浏览器或网络阻止接口请求时会报告连接失败，可改用本机版。
 
-微信后台读取、复杂文件整理与 Windows 系统通知由桌面程序管理。网页按钮通过 `shishi://connect` 唤起已安装的程序；程序启动服务后打开连接页。首次使用先下载 Releases 中的 Shishi-Windows.zip，解压后启动 Shishi.exe。网页不会自动访问 localhost 或同步本机群聊。方案资料支持 TXT/MD/CSV；方案数据库使用 SQL.js 存在当前浏览器中。
+微信后台读取、复杂文件整理与 Windows 系统通知由桌面程序管理。主连接按钮打开已经运行的本机服务页面，备用“启动桌面程序”按钮通过 `shishi://connect` 唤起程序。首次使用先下载 Releases 中的 Shishi-Windows.zip，解压后启动 Shishi.exe。网页不会自动访问 localhost 或同步本机群聊。方案资料支持 TXT/MD/CSV；方案数据库使用 SQL.js 存在当前浏览器中。
 
 ## 本地验收
 

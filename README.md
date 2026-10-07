@@ -16,7 +16,7 @@
 
 ## Windows 桌面版
 
-[下载桌面包](https://github.com/wsfsw/shishi/releases/latest/download/Shishi-Windows.zip)。桌面包包含 Node 和 Python 运行环境，无需另装开发工具。解压到自己可写的固定目录，首次运行 `Shishi.exe`；以后运行这个程序，或点击网页的“启动并连接本机微信”。首次浏览器可能要求确认打开拾事。
+[下载桌面包](https://github.com/wsfsw/shishi/releases/latest/download/Shishi-Windows.zip)。桌面包包含 Node 和 Python 运行环境，无需另装开发工具。解压到自己可写的固定目录，首次运行 `Shishi.exe`；以后运行这个程序，或点击网页的“连接本机微信”。主连接按钮打开本机服务页面；“启动桌面程序”备用按钮可能要求浏览器确认打开拾事。
 
 桌面程序启动并监督本机服务，以 Edge 应用窗口显示界面（未找到 Edge 时打开默认浏览器）。关闭界面后托盘继续工作；托盘菜单可设置登录 Windows 后启动，或退出后台服务。桌面程序没有数字签名，Windows 可能显示发布者未验证；请自行核实来源，勿关闭安全防护。
 
