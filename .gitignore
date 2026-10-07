@@ -26,3 +26,7 @@ dist/
 !/SECURITY.md
 .DS_Store
 Thumbs.db
+desktop-build/
+runtime/
+*.exe
+*.zip

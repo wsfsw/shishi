@@ -3,7 +3,8 @@ import path from 'node:path';
 import {spawn} from 'node:child_process';
 
 export function startBackgroundCollector(root){
- const python=path.join(root,'.wechat-venv','Scripts','python.exe');
+ const bundled=path.join(root,'runtime','python','python.exe');
+ const python=process.env.SHISHI_PYTHON||(fs.existsSync(bundled)?bundled:path.join(root,'.wechat-venv','Scripts','python.exe'));
  const script=path.join(root,'scripts','background_worker.py');
  if(process.platform!=='win32'||!fs.existsSync(python))return ()=>{};
  let child=null,stopped=false,timer=null;

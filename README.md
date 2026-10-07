@@ -9,12 +9,20 @@
 | 手动新增、编辑、完成事务 | 支持，保存在当前浏览器 | 支持，保存在本机数据库 |
 | 月历、详细周历、当天详情、ICS 导出 | 支持 | 支持 |
 | 微信消息读取 | 提供本机连接入口，读取在 Windows 页进行 | 仅读取用户明确选择的本机群聊 |
-| DeepSeek 整理聊天、文件与方案 | 自己的 API Key 可整理粘贴的文字；文件与方案用本机版 | 配置自己的 API Key 后使用 |
+| DeepSeek 整理聊天、文件与方案 | 自己的 API Key 可整理文字、生成方案、确认排期与复盘；方案资料支持 TXT/MD/CSV | 配置自己的 API Key 后使用 |
 | 提醒 | 页面打开期间的应用内提醒 | 应用内提醒与 Windows 通知 |
 
-网页不直接读取微信或本机数据库，不包含预置 API Key。连接设置页输入自己的密钥即可验证 DeepSeek，默认模型为 V4.1 Flash（接口名 `deepseek-flash`）。密钥仅保留在当前页面内存，刷新或关闭即清除，不写入 localStorage。连接测试和用户主动提交的文字直接发往 DeepSeek 官方接口，可能产生 API 费用。全部整理结果先进入事务箱，保留原文，确认后加入日历；进行中可暂停或结束。网页事务保存在浏览器本地，不与本机版或其他设备自动同步。
+网页不直接读取微信或本机数据库，不包含预置 API Key。连接设置页输入自己的密钥即可验证 DeepSeek，默认模型为 V4.1 Flash（接口名 `deepseek-flash`）。密钥仅保留在当前页面内存，刷新或关闭即清除，不写入 localStorage。连接测试和用户主动提交的文字直接发往 DeepSeek 官方接口，可能产生 API 费用。文字整理结果先进入事务箱；方案先展示安排前后对比，确认后加入日历；进行中可暂停或结束。网页事务保存在浏览器本地，不与本机版或其他设备自动同步。
 
-## Windows 本机运行
+## Windows 桌面版
+
+[下载桌面包](https://github.com/wsfsw/shishi/releases/latest/download/Shishi-Windows.zip)。桌面包包含 Node 和 Python 运行环境，无需另装开发工具。解压到自己可写的固定目录，首次运行 `Shishi.exe`；以后运行这个程序，或点击网页的“启动并连接本机微信”。首次浏览器可能要求确认打开拾事。
+
+桌面程序启动并监督本机服务，以 Edge 应用窗口显示界面（未找到 Edge 时打开默认浏览器）。关闭界面后托盘继续工作；托盘菜单可设置登录 Windows 后启动，或退出后台服务。桌面程序没有数字签名，Windows 可能显示发布者未验证；请自行核实来源，勿关闭安全防护。
+
+网页和桌面数据分别保存，不自动同步。方案与复盘不需要微信：网页版连接 DeepSeek 即可使用；桌面版即使微信未登录也可以使用方案功能。微信后台读取依赖具体客户端版本，本机已验证版本为 4.1.13.65，不能保证未来更新始终兼容。
+
+## Windows 源码运行
 
 需要 Node.js 22.13 或更新版本、Python 3.12，以及已登录的微信桌面客户端。微信数据库格式可能随版本变化，连接结果以页面实际状态为准。
 
@@ -36,6 +44,7 @@ node server.mjs
 ## 网页构建与部署
 
 ```shell
+npm ci
 npm run build:pages
 npm run preview:pages
 ```
@@ -60,3 +69,6 @@ Python 测试：
 `data/`、虚拟环境、日志、根目录截图、密钥文件与个人运行记录均不进入仓库，不要强制添加这些文件。站点发布包仅取自 `dist/`。
 
 数据库读取原语的来源与许可证见 `research/background-reader/NOTICE.md` 和随附 `LICENSE`；文档读取组件的说明与许可证见 `vendor/README.md` 与 `vendor/pypdf-licenses/LICENSE`。
+## 构建桌面包
+
+使用 `scripts/build-desktop.ps1 -NodeHome <Node目录> -PythonHome <Python312目录> -NodeLicense <Node许可证文件>`。Python 依赖从本项目虚拟环境的白名单包复制；需要 Windows .NET Framework 编译器。输出 `desktop-build/Shishi-Windows.zip`。只打包白名单源码、素材与运行环境，禁止加入 data、密钥、数据库、个人截图。发布前检查桌面包内容与 SHA256。

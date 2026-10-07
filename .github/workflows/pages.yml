@@ -16,6 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: npm ci
       - name: Check publish contents
         run: npm run check:publish
       - name: Validate browser and calendar logic

@@ -7,7 +7,7 @@ paths.search='M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15 M16 16l5 5';
 const icon = name => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name]||paths.inbox}"/></svg>`;
 document.querySelectorAll('[data-icon]').forEach(e=>e.innerHTML=icon(e.dataset.icon));
 let settingsDirty=false;
-let state, view=location.hash==='#settings'?'settings':'inbox', filter='inbox', category='全部', month=today().slice(0,7), day=today(), toastTimer, taskQuery='';
+let state, view=['inbox','calendar','summaries','notifications','settings','plans'].includes(location.hash.slice(1))?location.hash.slice(1):'inbox', filter='inbox', category='全部', month=today().slice(0,7), day=today(), toastTimer, taskQuery='';
 const labels={inbox:'事务箱',calendar:'日历',summaries:'群聊摘要',notifications:'提醒',settings:'微信连接'};
 async function api(url, data){const r=await fetch(url,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json','X-Requested-With':'shishi'},body:data===undefined?undefined:JSON.stringify(data)});const out=await r.json();if(!r.ok)throw new Error(out.error||'请求失败');return out;}
 function toast(message,error=false){const el=$('#toast');el.textContent=message;el.classList.toggle('error',error);el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,5000);}

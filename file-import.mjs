@@ -21,7 +21,8 @@ export function uploadedFile(input){
 
 export async function readDocument(file,{signal}={}){
  signal?.throwIfAborted();
- const python=process.env.SHISHI_PYTHON||path.join(root,'.wechat-venv','Scripts','python.exe');
+ const bundled=path.join(root,'runtime','python','python.exe');
+ const python=process.env.SHISHI_PYTHON||(fs.existsSync(bundled)?bundled:path.join(root,'.wechat-venv','Scripts','python.exe'));
  if(!fs.existsSync(python))throw new Error('文档读取组件未就绪，请检查项目 Python 环境');
  return new Promise((resolve,reject)=>{
   const child=spawn(python,['-X','utf8',path.join(root,'scripts','read_document.py')],{windowsHide:true,stdio:['pipe','pipe','pipe']});let output='',settled=false;

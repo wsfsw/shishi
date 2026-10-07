@@ -2,8 +2,8 @@
 (() => {
  const key='shishi.pages.data.v1',categories=['公告','会议','文件','费用','日程','其他'];
  const clone=value=>JSON.parse(JSON.stringify(value));
- let saved={tasks:[],notifications:[],reminded:{},messages:[],summaries:[]};
- try{const value=JSON.parse(localStorage.getItem(key)||'null');if(value&&Array.isArray(value.tasks)&&Array.isArray(value.notifications))saved={tasks:value.tasks,notifications:value.notifications,reminded:value.reminded||{},messages:Array.isArray(value.messages)?value.messages:[],summaries:Array.isArray(value.summaries)?value.summaries:[]};}catch{}
+ let saved={tasks:[],notifications:[],reminded:{},messages:[],summaries:[],planning:null};
+ try{const value=JSON.parse(localStorage.getItem(key)||'null');if(value&&Array.isArray(value.tasks)&&Array.isArray(value.notifications))saved={tasks:value.tasks,notifications:value.notifications,reminded:value.reminded||{},planning:value.planning||null,messages:Array.isArray(value.messages)?value.messages:[],summaries:Array.isArray(value.summaries)?value.summaries:[]};}catch{}
  function persist(next){try{localStorage.setItem(key,JSON.stringify(next));}catch{throw new Error('浏览器无法保存事务，请检查存储权限或空间。');}saved=next;}
  function tick(now=Date.now()){
   const next=clone(saved);let changed=false;
@@ -29,7 +29,7 @@
  }
  async function request(url,input){
   if(input===undefined&&url==='/api/state'){
-   tick();return clone({tasks:saved.tasks,summaries:saved.summaries,problems:[],notifications:saved.notifications,settings:{groups:[],categories,nickname:'',messageDateRange:{start:null,end:null},desktopEnabled:false,syncEnabled:false,allDayReminderTime:'09:00',ai:window.ShishiPagesAI.status(),bridgeStatus:{state:'blocked',provider:'pages',message:'点击连接本机微信，在 Windows 本机页选择群聊。'},lastSync:null}});
+   tick();return clone({tasks:saved.tasks,summaries:saved.summaries,problems:await window.ShishiPagesPlans.state(saved),notifications:saved.notifications,settings:{groups:[],categories,nickname:'',messageDateRange:{start:null,end:null},desktopEnabled:false,syncEnabled:false,allDayReminderTime:'09:00',ai:window.ShishiPagesAI.status(),bridgeStatus:{state:'blocked',provider:'pages',message:'点击连接本机微信，在 Windows 本机页选择群聊。'},lastSync:null}});
   }
   if(input===undefined&&url.startsWith('/api/sources?')){const ids=new URLSearchParams(url.split('?')[1]).get('ids')?.split(',')||[];return clone(saved.messages.filter(m=>ids.includes(m.id)));}
   if(url==='/api/ai/config')return window.ShishiPagesAI.connect(input);
@@ -41,8 +41,9 @@
    next.messages.push(...messages.map(m=>({id:m.id,text:m.text,sender:m.sender,sent_at:m.sentAt,group_name:group})));
    next.summaries.unshift(...result.summaries.map(s=>({...s,id:crypto.randomUUID(),group_name:group,created_at:createdAt})));
    persist(next);return {ok:true,message:'已整理 '+tasks.length+' 条事务，请核对后加入日历'};
-  });
+  },(kind,input,options)=>window.ShishiPagesPlans.job(kind,input,options,()=>saved,persist));
   if(url.startsWith('/api/ai/jobs/')){const action=url.slice('/api/ai/jobs/'.length).split('?')[0],id=input?.id||new URLSearchParams(url.split('?')[1]).get('id');return window.ShishiPagesAI.action(action,id);}
+  if(url.startsWith('/api/plans/'))return window.ShishiPagesPlans.request(url.slice('/api/plans/'.length),input,()=>saved,persist);
   const next=clone(saved);
   if(url==='/api/tasks/save'){
    const fields=validate(input),id=input.id||crypto.randomUUID(),existing=next.tasks.find(t=>t.id===id);
@@ -66,7 +67,9 @@
   const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
   const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Shishi//Browser Tasks//ZH','CALSCALE:GREGORIAN'];
   for(const t of saved.tasks.filter(t=>t.status==='pending'&&t.dueAt)){
-   lines.push('BEGIN:VEVENT','UID:'+t.id+'@shishi.pages','DTSTAMP:'+stamp,t.precision==='date'?'DTSTART;VALUE=DATE:'+t.dueAt.replaceAll('-',''):'DTSTART:'+new Date(t.dueAt).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''),'SUMMARY:'+escape(t.title),'DESCRIPTION:'+escape(t.reason),'END:VEVENT');
+   lines.push('BEGIN:VEVENT','UID:'+t.id+'@shishi.pages','DTSTAMP:'+stamp,t.precision==='date'?'DTSTART;VALUE=DATE:'+t.dueAt.replaceAll('-',''):'DTSTART:'+new Date(t.dueAt).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''));
+   if(t.precision==='minute'&&t.durationMinutes)lines.push('DTEND:'+new Date(Date.parse(t.dueAt)+t.durationMinutes*60000).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''));
+   lines.push('SUMMARY:'+escape(t.title),'DESCRIPTION:'+escape(t.reason),'END:VEVENT');
   }
   return lines.concat('END:VCALENDAR','').join('\r\n');
  }

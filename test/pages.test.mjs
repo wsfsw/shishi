@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {randomUUID} from 'node:crypto';
-import {browserShared} from '../scripts/browser-shared.mjs';
-function browser(fetchImpl){const storage=new Map();const context=vm.createContext({window:{},crypto:{randomUUID},URLSearchParams,AbortController,AbortSignal,fetch:fetchImpl||(()=>{throw new Error('Unexpected network call');}),localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)}});vm.runInContext(browserShared(),context);for(const file of ['pages-ai.js','pages-runtime.js'])vm.runInContext(fs.readFileSync(new URL('../web/'+file,import.meta.url),'utf8'),context);return {runtime:context.window.ShishiPages,storage};}
+import initSqlJs from 'sql.js';
+import {browserShared,browserPlanner} from '../scripts/browser-shared.mjs';
+function browser(fetchImpl,storage=new Map()){const context=vm.createContext({window:{},initSqlJs:()=>initSqlJs(),document:{baseURI:'https://example.test/'},URL,TextDecoder,atob,btoa,Uint8Array,crypto:{randomUUID},URLSearchParams,AbortController,AbortSignal,fetch:fetchImpl||(()=>{throw new Error('Unexpected network call');}),localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)}});vm.runInContext(browserShared(),context);vm.runInContext(browserPlanner(),context);for(const file of ['pages-planner.js','pages-ai.js','pages-runtime.js'])vm.runInContext(fs.readFileSync(new URL('../web/'+file,import.meta.url),'utf8'),context);return {runtime:context.window.ShishiPages,storage};}
 test('网页从空数据开始，拒绝自动微信读取；没有预置账号和密钥',async()=>{
  const {runtime,storage}=browser();const state=await runtime.request('/api/state');assert.equal(state.tasks.length,0);assert.equal(state.settings.groups.length,0);assert.equal(state.settings.ai.configured,false);assert.equal(state.settings.syncEnabled,false);assert.equal(storage.size,0);
  await assert.rejects(runtime.request('/api/sync/request',{}),/本机版/);
@@ -15,6 +16,17 @@ function response(content){return {ok:true,json:async()=>({choices:[{finish_reas
 const jobInput={kind:'chat',input:{group:'合成测试资料',messages:[{sender:'测试',text:'2099年10月8日14:30开会',sentAt:'2099-10-07'}]}};
 function extracted(options){const source=JSON.parse(options.body).messages[1].content,ids=JSON.parse(source).messages.map(m=>m.id);return response({tasks:[{title:'合成测试会议',category:'会议',dueAt:'2099-10-08T14:30:00+08:00',precision:'minute',audience:'all',priority:'normal',sourceIds:ids,reason:'合成测试'}],summaries:[{category:'会议',text:'合成摘要',sourceIds:ids}]});}
 async function settle(){await new Promise(resolve=>setImmediate(resolve));}
+async function finishJob(runtime,kind,input){const j=await runtime.request('/api/ai/jobs/start',{kind,input});for(let i=0;i<100;i++){await new Promise(r=>setTimeout(r,10));const s=await runtime.request('/api/ai/jobs/status?id='+j.id);if(s.state==='failed')throw new Error(s.error);if(s.state==='ready')await runtime.request('/api/ai/jobs/commit',{id:j.id});if(s.state==='completed')return s.result;}throw new Error('Job timed out');}
+test('无需微信：浏览器独立完成建议、方案、日历确认、反馈及经验导出',async()=>{
+ const {runtime,storage}=browser(async(url,options)=>{const b=JSON.parse(options.body);if(b.messages[1].content==='拾事连接测试。')return response({ok:true});if(b.messages[0].content.includes('比较 2 到 3'))return response({suggestions:[{title:'分步练习',method:'先学习再练习',conditions:'每天有空闲',estimatedMinutes:60,resources:['练习资料']}]});return response({goal:'完成练习',resources:['练习资料'],criteria:['完成两部分'],steps:[{title:'学习第一部分',description:'记录重点',minutes:30},{title:'完成练习',description:'检查答案',minutes:30}]});});
+ await runtime.request('/api/ai/config',{apiKey:'visitor-test-key'});
+ const input={title:'独立方案测试',description:'按两个步骤完成练习',board:'学习',constraints:{startDate:'2099-10-07',startTime:'18:00',endTime:'21:00',dailyMinutes:90,weekdays:[0,1,2,3,4,5,6]}};
+ const created=await finishJob(runtime,'problem',input);let state=await runtime.request('/api/state');assert.equal(state.settings.groups.length,0);assert.equal(state.problems[0].suggestions.length,1);
+ await finishJob(runtime,'generate',{problemId:created.id,suggestionIds:[state.problems[0].suggestions[0].id]});state=await runtime.request('/api/state');assert.equal(state.tasks.length,0);const draft=state.problems[0].draft;assert.equal(draft.comparison.conflicts.length,0);
+ await runtime.request('/api/plans/confirm',{solutionId:draft.id,baseFingerprint:draft.baseFingerprint});state=await runtime.request('/api/state');assert.equal(state.tasks.length,2);const restored=await browser(undefined,storage).runtime.request('/api/state');assert.equal(restored.problems.length,1);assert.equal(restored.tasks.length,2);assert.equal(restored.settings.ai.configured,false);assert(state.tasks.every(t=>t.status==='pending'));assert(state.tasks.every(t=>t.durationMinutes===30));
+ await runtime.request('/api/plans/feedback',{problemId:created.id,note:'练习完成',outcome:'resolved',progress:state.tasks.map(t=>({taskId:t.id,progress:'done',actualMinutes:25,difficulty:''}))});
+ await runtime.request('/api/plans/share',{problemId:created.id});const experience=await runtime.request('/api/plans/experience',{problemId:created.id});assert.equal(experience.steps.length,2);assert.equal((await runtime.request('/api/state')).problems[0].status,'resolved');assert(![...storage.values()].join('').includes('visitor-test-key'));
+});
 test('自己的密钥只发给官方接口，不进入存储；刷新和断开后清除',async()=>{
  const calls=[];const {runtime,storage}=browser(async(url,options)=>{calls.push({url,options});return response({ok:true});});
  await runtime.request('/api/ai/config',{apiKey:'visitor-test-key',model:'deepseek-flash'});
@@ -23,6 +35,19 @@ test('自己的密钥只发给官方接口，不进入存储；刷新和断开�
  await runtime.request('/api/tasks/save',{title:'独立记录',category:'其他'});assert(![...storage.values()].join('').includes('visitor-test-key'));
  assert.equal((await browser().runtime.request('/api/state')).settings.ai.configured,false);
  await runtime.request('/api/ai/config',{removeKey:true});assert.equal((await runtime.request('/api/state')).settings.ai.configured,false);
+});
+test('浏览器方案暂停后取消，迟到的建议不能写入问题或覆盖已有事务',async()=>{
+ let finish;
+ const {runtime,storage}=browser(async(url,opt)=>JSON.parse(opt.body).messages[1].content==='拾事连接测试。'?response({ok:true}):new Promise(resolve=>finish=resolve));
+ await runtime.request('/api/ai/config',{apiKey:'visitor-test-key'});
+ await runtime.request('/api/tasks/save',{title:'保留的事务',category:'其他'});
+ const before=[...storage.values()].join('');
+ const j=await runtime.request('/api/ai/jobs/start',{kind:'problem',input:{title:'取消验收',description:'不会保存的合成问题',board:'学习'}});
+ for(let i=0;i<100&&!finish;i++)await new Promise(r=>setTimeout(r,5));
+ assert(finish);await runtime.request('/api/ai/jobs/pause',{id:j.id});
+ finish(response({suggestions:[{title:'测试方法',method:'测试',conditions:'测试',estimatedMinutes:30,resources:[]}]}));await settle();
+ await runtime.request('/api/ai/jobs/cancel',{id:j.id});await settle();
+ assert.equal((await runtime.request('/api/state')).problems.length,0);assert.equal([...storage.values()].join(''),before);
 });
 test('错误密钥不会连接，不回显服务返回的敏感错误正文',async()=>{
  const {runtime,storage}=browser(async()=>({ok:false,status:401,json:async()=>({error:'sensitive-provider-body'})}));

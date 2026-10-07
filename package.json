@@ -1,15 +1,20 @@
 {
   "name": "shishi-wechat-inbox",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "个人微信群聊事务箱、日历与本机提醒",
-  "engines": {"node": ">=22.13"},
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs",
     "build:pages": "node scripts/build-pages.mjs",
     "preview:pages": "node scripts/preview-pages.mjs",
     "check:publish": "node scripts/check-publish.mjs"
+  },
+  "devDependencies": {
+    "sql.js": "1.14.2"
   }
 }

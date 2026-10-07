@@ -142,6 +142,7 @@ async function importMessages(input,agent,control={}){
 const server=http.createServer(async(req,res)=>{try{
  if(req.headers.host!==`127.0.0.1:${port}`)return json(res,403,{error:'只允许本机访问'});
  const url=new URL(req.url,origin);const agent=validToken(req.headers['x-agent-token']);const sid=req.headers.cookie?.match(new RegExp('(?:^|; )'+sessionCookie+'=([a-f0-9]+)'))?.[1];
+ if(req.method==='GET'&&url.pathname==='/health')return json(res,200,{app:'shishi',ready:true});
  if(url.pathname.startsWith('/api/')){if(!agent&&!sessions.has(sid))return json(res,401,{error:'请先打开应用页面'});if(req.method!=='GET'&&!agent&&(req.headers.origin!==origin||req.headers['x-requested-with']!=='shishi'))return json(res,403,{error:'请求来源不正确'});return await api(req,res,url,agent,sid);}
  if(req.method!=='GET')return json(res,405,{error:'不支持此操作'});
  const target=url.pathname==='/'?'index.html':decodeURIComponent(url.pathname.slice(1));const filepath=path.resolve(root,'public',target);if(!filepath.startsWith(path.join(root,'public')+path.sep)||!fs.existsSync(filepath)||!fs.statSync(filepath).isFile())return json(res,404,{error:'页面不存在'});

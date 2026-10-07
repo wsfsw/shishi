@@ -14,9 +14,13 @@
   finally{connecting=false;}
  }
  async function test(){if(!credential)throw new Error('请先输入 API Key 并连接 DeepSeek');await provider.testDeepSeek({apiKey:credential,model});lastTestedAt=new Date().toISOString();return {ok:true};}
- function start(input,save){
+ function start(input,save,planJob){
   if(!credential)throw new Error('请先在连接设置中输入 API Key 并连接 DeepSeek');
-  if(input.kind!=='chat')throw new Error('网页支持整理聊天文字，文件和方案请使用本机版');
+  if(['problem','suggest','generate'].includes(input.kind)){
+   const apiKey=credential,selectedModel=model;
+   return jobs.start('page',control=>planJob(input.kind,input.input,{...control,apiKey,model:selectedModel}),'DeepSeek 正在整理方案…');
+  }
+  if(input.kind!=='chat')throw new Error('这项文件整理请使用桌面版');
   const value=input.input,group=String(value?.group||'').trim();
   if(!group||group.length>120||!Array.isArray(value.messages)||!value.messages.length||value.messages.length>300)throw new Error('请填写来源名称和最多 300 条文字');
   let size=0;
