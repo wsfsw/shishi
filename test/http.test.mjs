@@ -75,5 +75,14 @@ test('本机接口：群聊选择、来源校验、CSRF 与日历导出',async()
  assert.equal((await post('/api/import',{...batch,messageDateRange:{start:'2026-10-05',end:'2026-10-07'}},agent)).status,200);
  assert.equal((await (await fetch(base+'/api/state',{headers:{Cookie:cookie}})).json()).tasks.length,count);
  const committedJob=await (await post('/api/ai/jobs/start',{kind:'chat',input:{group:'群 A',messages:[{id:'job-commit-source',text:'2026年10月6日提交文件',sentAt:'2026-10-06'}]}})).json();await readyJob(committedJob.id);await post('/api/ai/jobs/commit',{id:committedJob.id});for(let i=0;i<50&&(await jobStatus(committedJob.id)).state!=='completed';i++)await new Promise(r=>setTimeout(r,10));assert.equal((await jobStatus(committedJob.id)).state,'completed');assert.equal((await (await fetch(base+'/api/state',{headers:{Cookie:cookie}})).json()).tasks.length,count+1);
+ const bulkIds=[state.tasks[0].id,localTask.id];
+ assert.equal((await post('/api/tasks/bulk',{ids:bulkIds,action:'delete'},agent)).status,400);
+ assert.equal((await post('/api/tasks/bulk',{ids:[bulkIds[0],'missing'],action:'delete'})).status,400);
+ assert.equal((await post('/api/tasks/bulk',{ids:bulkIds,action:'delete'})).status,200);
+ const deletedState=await (await fetch(base+'/api/state',{headers:{Cookie:cookie}})).json();assert(deletedState.tasks.filter(t=>bulkIds.includes(t.id)).every(t=>t.status==='deleted'));
+ assert(!(await (await fetch(base+'/api/calendar.ics',{headers:{Cookie:cookie}})).text()).includes('DTSTART:20261007T070000Z'));
+ assert.equal((await post('/api/tasks/status',{id:bulkIds[0],status:'inbox'})).status,400);
+ assert.equal((await post('/api/tasks/bulk',{ids:bulkIds,action:'restore'})).status,200);
+ const restoredState=await (await fetch(base+'/api/state',{headers:{Cookie:cookie}})).json();assert.equal(restoredState.tasks.find(t=>t.id===bulkIds[0]).status,'pending');assert.equal(restoredState.tasks.find(t=>t.id===localTask.id).status,'inbox');
  }finally{child.kill();await new Promise(r=>child.once('exit',r));rmSync(dir,{recursive:true,force:true});}
 });

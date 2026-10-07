@@ -24,3 +24,11 @@ test('未知日期明确待确认，已完成卡片不提供再次完成操作',
  const html=vm.runInContext('renderInboxCard(item)',c);
  assert(html.includes('日期待确认'));assert(html.includes('已完成'));assert(html.includes('查看详情'));assert(!html.includes('data-status="done"'));
 });
+test('多选仅保留当前筛选结果，切换条件不残留隐藏选择，回收站只提供恢复',()=>{
+ const c=context([{id:'a',status:'inbox',category:'会议',title:'合成会议'},{id:'b',status:'inbox',category:'文件',title:'合成文件'},{id:'c',status:'deleted',deletedFromStatus:'pending',category:'会议',title:'合成删除事务'}]);
+ vm.runInContext("inboxSelecting=true;inboxSelected=new Set(['a','b','c']);syncInboxSelection()",c);assert.deepEqual(Array.from(vm.runInContext('[...inboxSelected]',c)),['a','b']);
+ vm.runInContext('inboxType="会议";syncInboxSelection()',c);assert.deepEqual(Array.from(vm.runInContext('[...inboxSelected]',c)),['a']);
+ const markup=vm.runInContext('inboxSelectable(state.tasks[0],renderInboxCard(state.tasks[0]))',c);assert(markup.includes('data-task-select="a"'));assert(markup.includes('is-selected'));assert(markup.includes('aria-label="选择事务：合成会议"'));
+ const trash=vm.runInContext('filter="deleted";inboxBatchToolbar()',c);assert(trash.includes('恢复所选'));assert(!trash.includes('删除所选'));
+ const card=vm.runInContext('renderInboxCard(state.tasks[2])',c);assert(card.includes('恢复事务'));assert(!card.includes('data-edit='));
+});

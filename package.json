@@ -1,6 +1,6 @@
 {
   "name": "shishi-wechat-inbox",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "description": "个人微信群聊事务箱、日历与本机提醒",

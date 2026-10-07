@@ -36,6 +36,16 @@ test('自己的密钥只发给官方接口，不进入存储；刷新和断开�
  assert.equal((await browser().runtime.request('/api/state')).settings.ai.configured,false);
  await runtime.request('/api/ai/config',{removeKey:true});assert.equal((await runtime.request('/api/state')).settings.ai.configured,false);
 });
+test('网页批量操作无需 AI，回收站刷新后可恢复，删除停止日历和提醒且不误改其他事务',async()=>{
+ const {runtime,storage}=browser();const a=await runtime.request('/api/tasks/save',{title:'合成已安排',status:'pending',dueAt:'2099-10-08T14:30:00+08:00'}),b=await runtime.request('/api/tasks/save',{title:'合成待确认'}),c=await runtime.request('/api/tasks/save',{title:'合成未选事务'});
+ await assert.rejects(runtime.request('/api/tasks/bulk',{ids:[a.id,'missing'],action:'delete'}),/不存在/);assert(runtime.calendar().includes('合成已安排'));
+ await runtime.request('/api/tasks/bulk',{ids:[a.id,b.id],action:'delete'});assert(!runtime.calendar().includes('合成已安排'));runtime.tick(Date.parse('2099-10-09'));
+ assert.equal((await runtime.request('/api/state')).notifications.length,0);const reloaded=browser(undefined,storage).runtime;
+ let state=await reloaded.request('/api/state');assert.equal(state.tasks.find(t=>t.id===c.id).status,'inbox');assert.equal(state.tasks.filter(t=>t.status==='deleted').length,2);
+ await assert.rejects(reloaded.request('/api/tasks/status',{id:a.id,status:'inbox'}),/状态/);
+ await reloaded.request('/api/tasks/bulk',{ids:[a.id,b.id],action:'restore'});state=await reloaded.request('/api/state');assert.equal(state.tasks.find(t=>t.id===a.id).status,'pending');assert.equal(state.tasks.find(t=>t.id===b.id).status,'inbox');assert(reloaded.calendar().includes('合成已安排'));
+ await reloaded.request('/api/tasks/bulk',{ids:[b.id],action:'done'});await reloaded.request('/api/tasks/bulk',{ids:[c.id],action:'dismissed'});state=await reloaded.request('/api/state');assert.equal(state.tasks.find(t=>t.id===b.id).status,'done');assert.equal(state.tasks.find(t=>t.id===c.id).status,'dismissed');assert.equal(state.settings.ai.configured,false);
+});
 test('浏览器方案暂停后取消，迟到的建议不能写入问题或覆盖已有事务',async()=>{
  let finish;
  const {runtime,storage}=browser(async(url,opt)=>JSON.parse(opt.body).messages[1].content==='拾事连接测试。'?response({ok:true}):new Promise(resolve=>finish=resolve));

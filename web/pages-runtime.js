@@ -44,15 +44,16 @@
   },(kind,input,options)=>window.ShishiPagesPlans.job(kind,input,options,()=>saved,persist));
   if(url.startsWith('/api/ai/jobs/')){const action=url.slice('/api/ai/jobs/'.length).split('?')[0],id=input?.id||new URLSearchParams(url.split('?')[1]).get('id');return window.ShishiPagesAI.action(action,id);}
   if(url.startsWith('/api/plans/'))return window.ShishiPagesPlans.request(url.slice('/api/plans/'.length),input,()=>saved,persist);
+  if(url==='/api/tasks/bulk')return window.ShishiPagesPlans.request('bulk',input,()=>saved,persist);
   const next=clone(saved);
   if(url==='/api/tasks/save'){
    const fields=validate(input),id=input.id||crypto.randomUUID(),existing=next.tasks.find(t=>t.id===id);
-   if(input.id&&!existing)throw new Error('事务不存在');
+   if(input.id&&(!existing||existing.status==='deleted'))throw new Error('事务不存在或已在回收站，请先恢复');
    if(existing)Object.assign(existing,fields);else next.tasks.unshift({id,...fields,group:'手动添加',sourceIds:[],audience:'self',createdAt:new Date().toISOString()});
    persist(next);return {ok:true,id};
   }
   if(url==='/api/tasks/status'){
-   const task=next.tasks.find(t=>t.id===input.id);if(!task||!['done','dismissed','inbox'].includes(input.status))throw new Error('事务状态不正确');
+   const task=next.tasks.find(t=>t.id===input.id);if(!task||task.status==='deleted'||!['done','dismissed','inbox'].includes(input.status))throw new Error('事务状态不正确');
    task.status=input.status;persist(next);return {ok:true};
   }
   if(url==='/api/notifications/read'){

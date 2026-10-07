@@ -29,7 +29,7 @@ function renderSolution(p,s){
 }
 
 function renderFeedback(p){
- const items=p.progress.filter(r=>r.solution_id===p.activeSolutionId&&r.task);
+ const items=p.progress.filter(r=>r.solution_id===p.activeSolutionId&&r.task&&r.task.status!=='deleted');
  return `<section class="panel planning-section"><p class="eyebrow">04 · 执行与反馈调整</p><h2>记录实际情况，再决定下一步</h2><form id="feedback-form">${items.map(r=>`<article class="execution-item" data-progress-task="${r.task_id}"><strong>${esc(r.task.title)}</strong><p class="hint">原计划 ${r.minutes} 分钟 · ${fmt(r.task.dueAt)}</p><div class="form-row"><label>进度<select name="progress"><option value="todo" ${r.progress==='todo'?'selected':''}>尚未开始</option><option value="doing" ${r.progress==='doing'?'selected':''}>正在进行</option><option value="done" ${r.progress==='done'?'selected':''}>已完成</option><option value="blocked" ${r.progress==='blocked'?'selected':''}>遇到困难</option></select></label><label>实际用时（分钟）<input name="actualMinutes" type="number" min="0" max="100000" value="${r.actual_minutes}" required></label></div><label>遇到的困难<input name="difficulty" maxlength="2000" value="${esc(r.difficulty)}" placeholder="方法不适合、资料不足、时间不够等"></label></article>`).join('')}<label>实际结果与调整想法<textarea name="note" rows="3" maxlength="6000" required placeholder="哪些步骤有效？与原计划相比有什么变化？下一轮想如何调整？"></textarea></label><label>问题是否解决<select name="outcome"><option value="unresolved">尚未解决，继续调整</option><option value="resolved" ${p.status==='resolved'?'selected':''}>我确认已经解决</option></select></label><button class="button primary" type="submit">保存进度与反馈</button></form></section>`;
 }
 

@@ -4,6 +4,19 @@ import {createStore} from '../store.mjs';
 import {inferDate,extractMessages,idFor} from '../extract.mjs';
 import {tickReminders,dueReminders,snoozeNotification} from '../reminders.mjs';
 const reference='2026-10-06T23:30:00+08:00';
+
+test('批量删除可恢复原状态和来源，回收站停止日历提醒，失败整批回滚',()=>{
+ const s=createStore(':memory:');
+ for(const [id,status] of [['a','inbox'],['b','pending'],['c','done'],['d','dismissed']])s.addTask({id,title:'合成事务 '+id,status,dueAt:'2099-10-08T14:30:00+08:00',precision:'minute',group:'合成来源',sourceIds:['source-'+id],reason:'保留备注'});
+ const before=s.listTasks();assert.throws(()=>s.batchTasks(['a','missing'],'delete'),/不存在/);assert.equal(s.getTask('a').status,'inbox');
+ s.db.exec("CREATE TRIGGER block_delete BEFORE UPDATE ON tasks WHEN NEW.id='b' AND NEW.status='deleted' BEGIN SELECT RAISE(ABORT,'test rollback'); END;");
+ assert.throws(()=>s.batchTasks(['a','b'],'delete'),/rollback/);assert.equal(s.getTask('a').status,'inbox');assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM task_trash').get().n,0);s.db.exec('DROP TRIGGER block_delete');
+ assert.equal(s.batchTasks(['a','b','c','d','a'],'delete').count,4);assert(s.listTasks().every(t=>t.status==='deleted'));assert.equal(dueReminders(s,Date.parse('2099-10-09')).length,0);
+ assert.throws(()=>s.batchTasks(['a'],'done'),/状态/);assert.equal(s.batchTasks(['a','b','c','d'],'restore').count,4);
+ for(const old of before){const restored=s.getTask(old.id);for(const field of ['status','title','dueAt','precision','group','reason','createdAt','sourceIds'])assert.deepEqual(restored[field],old[field]);}
+ s.batchTasks(['a','b'],'done');assert.equal(s.getTask('a').status,'done');assert.equal(s.getTask('b').status,'done');assert.equal(s.getTask('d').status,'dismissed');
+ s.db.close();
+});
 test('相对日期以原消息日期为准，跨月与北京时间均正确',()=>{
  assert.deepEqual(inferDate('请明天下午3点开会',reference),{dueAt:'2026-10-07T15:00:00+08:00',precision:'minute'});
  assert.equal(inferDate('明天上午9点提交','2026-10-31T23:59:00+08:00').dueAt,'2026-11-01T09:00:00+08:00');
