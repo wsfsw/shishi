@@ -109,3 +109,13 @@ test('网页提醒仅针对本浏览器已安排事务，同一提醒只生成�
  runtime.tick(Date.parse('2099-10-08T14:15:00+08:00'));runtime.tick(Date.parse('2099-10-08T14:16:00+08:00'));
  const state=await runtime.request('/api/state');assert.equal(state.notifications.length,1);assert.equal(state.notifications[0].desktop_status,'disabled');await runtime.request('/api/notifications/read',{id:state.notifications[0].id});assert.equal((await runtime.request('/api/state')).notifications[0].read,1);
 });
+
+
+test('跨端恢复后重新完成旧重复事务，不再生成第二份下一次事务',async()=>{
+ const {runtime}=browser(),a=await runtime.request('/api/tasks/save',{title:'跨端重复验收',status:'pending',dueAt:'2099-01-31',repeat:'monthly'});
+ await runtime.request('/api/tasks/status',{id:a.id,status:'done'});
+ const next=(await runtime.request('/api/state')).tasks.find(t=>t.id!==a.id);await runtime.request('/api/tasks/bulk',{ids:[next.id],action:'reschedule',options:{dueAt:'2099-03-02'}});
+ const target=createStore(':memory:');createPlanner(target);importBackup(target,await runtime.request('/api/data/export'));
+ target.setStatus(a.id,'inbox');target.setStatus(a.id,'done');assert.equal(target.listTasks().length,2);
+ target.db.close();
+});

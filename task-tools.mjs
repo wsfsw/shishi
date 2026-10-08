@@ -3,7 +3,7 @@ export const TASK_CATEGORIES=['公告','会议','文件','费用','日程','其�
 export function validTaskDate(value){return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;}
 export function validTaskDue(value){return !value||validTaskDate(value)||typeof value==='string'&&validTaskDate(value.slice(0,10))&&/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\+08:00$/.test(value);}
 export function taskDetails(input={},previous={}){
- const d={deadlineAt:null,durationMinutes:null,project:'',tags:[],checklist:[],repeat:'none',repeatSeriesId:null,repeatAnchor:null};
+ const d={deadlineAt:null,durationMinutes:null,project:'',tags:[],checklist:[],repeat:'none',repeatSeriesId:null,repeatAnchor:null,repeatParentId:null};
  for(const k of Object.keys(d)){if(Object.hasOwn(previous,k))d[k]=previous[k];if(Object.hasOwn(input,k))d[k]=input[k];}
  if(d.deadlineAt&&!validTaskDate(d.deadlineAt))throw new Error('截止日期不正确');
  if(d.durationMinutes!==null&&(!Number.isInteger(d.durationMinutes)||d.durationMinutes<5||d.durationMinutes>1440))throw new Error('预计用时应为 5 至 1440 分钟');
@@ -11,7 +11,7 @@ export function taskDetails(input={},previous={}){
  if(!Array.isArray(d.tags)||d.tags.length>20||d.tags.some(t=>typeof t!=='string'||!t.trim()||t.length>30))throw new Error('最多 20 个标签，每个最多 30 字');d.tags=[...new Set(d.tags.map(t=>t.trim()))];
  if(!Array.isArray(d.checklist)||d.checklist.length>50||d.checklist.some(t=>!t||typeof t.text!=='string'||!t.text.trim()||t.text.length>200||typeof t.done!=='boolean'))throw new Error('检查清单格式不正确');d.checklist=d.checklist.map(t=>({text:t.text.trim(),done:t.done}));
  if(!['none','daily','weekly','monthly'].includes(d.repeat))throw new Error('重复规则不正确');
- for(const k of ['repeatSeriesId','repeatAnchor'])if(d[k]!==null&&(typeof d[k]!=='string'||d[k].length>200))throw new Error('重复系列不正确');
+ for(const k of ['repeatSeriesId','repeatAnchor','repeatParentId'])if(d[k]!==null&&(typeof d[k]!=='string'||d[k].length>200))throw new Error('重复系列不正确');
  return d;
 }
 export function validateTaskFields(input){
