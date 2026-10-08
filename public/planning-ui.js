@@ -54,7 +54,7 @@ $('#problem-form').addEventListener('submit',async e=>{
  try{
   const input={title:v.get('title'),description:v.get('description'),goal:v.get('goal'),board:v.get('board'),tags:v.get('tags'),visibility:v.get('visibility'),constraints:{startDate:v.get('startDate'),deadline:v.get('deadline')||null,startTime:v.get('startTime'),endTime:v.get('endTime'),dailyMinutes:Number(v.get('dailyMinutes')),weekdays:v.getAll('weekday').map(Number)}};
   if(file){if(file.size>10*1024*1024)throw new Error('资料文件不能超过 10MB');input.file={name:file.name,content:await fileAsBase64(file)};}
-  const result=await runAIJob('problem',input,{title:'整理问题并比较方法'});selectedProblemId=result.id;$('#problem-dialog').close();view='plans';await refresh();
+  const result=await runAIJob('problem',input,{title:'整理问题并比较方法'});selectedProblemId=result.id;draftClear('problem');$('#problem-dialog').close();view='plans';await refresh();
  }catch(error){if(error.code==='AI_CANCELLED')toast(error.message);else if($('#problem-dialog').open)$('#problem-error').textContent=error.message;else if($('#planning-error'))$('#planning-error').textContent=error.message;}finally{planningBusy=false;button.disabled=false;button.textContent=original;if($('#planning-progress'))$('#planning-progress').hidden=true;}
 });
 

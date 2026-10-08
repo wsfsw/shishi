@@ -17,10 +17,16 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
+      - uses: actions/setup-python@v5
+        id: python
+        with:
+          python-version: '3.12'
       - name: Check publish contents
         run: npm run check:publish
-      - name: Validate browser and calendar logic
-        run: node --test test/pages.test.mjs test/calendar-ui.test.mjs test/feed-ui.test.mjs test/message-date-range.test.mjs test/ai-jobs.test.mjs
+      - name: Validate complete task and planning logic
+        run: npm test
+        env:
+          SHISHI_PYTHON: ${{ steps.python.outputs.python-path }}
       - name: Build static website
         run: npm run build:pages
       - uses: actions/upload-pages-artifact@v4

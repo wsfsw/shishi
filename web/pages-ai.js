@@ -27,7 +27,7 @@
   const messages=value.messages.map(m=>{
    const text=String(m.text||'').trim(),date=String(m.sentAt||'');size+=text.length;
    if(!text||text.length>24000||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)throw new Error('请填写有效的消息日期和文字');
-   return {id:crypto.randomUUID(),text,sender:String(m.sender||'未识别').slice(0,80),sentAt:date};
+   const sender=String(m.sender||'未识别').slice(0,80);return {id:window.ShishiPlannerCore.stableBrowserId(group,sender,date,text),text,sender,sentAt:date};
   });
   if(size>60000)throw new Error('文字超过 60000 字，请分批整理');
   const apiKey=credential,selectedModel=model;

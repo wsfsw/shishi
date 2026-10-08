@@ -41,7 +41,8 @@ test('指定他人的事项不转成我的待办，取消信息仍留摘要',()=
 test('重复同步不重复建立事务，所有事项有原话，错误批次整体回滚',()=>{
  const s=createStore(':memory:');const m={id:'msg1',text:'请大家明天下午3点开会',sentAt:reference};const input={group:'测试群',messages:[m],...extractMessages([m],{group:'测试群'})};
  assert.equal(s.ingest(input),1);assert.equal(s.ingest(input),0);assert.equal(s.listTasks().length,1);assert.equal(s.listTasks()[0].status,'inbox');
- assert.equal(s.ingest({...input,tasks:input.tasks.map(t=>({...t,title:'同一消息换一个标题'}))}),0);
+ const current=s.listTasks()[0];s.updateTask({...current,title:'我编辑后的标题'});
+ assert.equal(s.ingest(input),0);assert.equal(s.listTasks()[0].title,'我编辑后的标题');
  assert.throws(()=>s.ingest({...input,group:'另一个群'}),/来源不一致/);
  assert.throws(()=>s.ingest({group:'测试群',messages:[{id:'bad',text:'错误批次'}],tasks:[{title:'捏造',sourceIds:['不存在']}]}),/原始消息/);
  assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM messages').get().n,1);s.db.close();

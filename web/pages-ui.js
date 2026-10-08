@@ -12,13 +12,13 @@
  renderSettings=()=>{
   const ai=state.settings.ai;
   return header('让拾事适合你的使用方式','设置','管理工具连接，下载桌面版。网页方案与复盘只需连接 DeepSeek。')+
-  `<nav class="pages-settings-nav" aria-label="设置分类"><button class="button secondary" data-settings-section="pages-wechat">微信连接</button><button class="button secondary" data-settings-section="pages-deepseek">DeepSeek 连接</button><button class="button secondary" data-settings-section="pages-desktop">桌面版下载</button></nav>
+  `<nav class="pages-settings-nav" aria-label="设置分类"><button class="button secondary" data-settings-section="pages-wechat">微信连接</button><button class="button secondary" data-settings-section="pages-deepseek">DeepSeek 连接</button><button class="button secondary" data-settings-section="pages-desktop">桌面版下载</button><button class="button secondary" data-settings-section="data-settings">数据与迁移</button><button class="button secondary" data-settings-section="organize-history">整理记录</button></nav>
   <div class="pages-connections">
    <section class="panel pages-local-panel" id="pages-wechat" tabindex="-1" aria-labelledby="pages-wechat-title">
     <div class="pages-connection-heading"><span class="chip tone-mint">微信连接</span><span class="muted">Windows 本机</span></div>
     <h2 id="pages-wechat-title">连接自己的微信</h2><p>保持微信登录，启动拾事桌面版后连接。在本机页面选择群聊、日期和信息类型，再保存设置。</p>
     <div class="head-actions">${localLink}<a class="button secondary" href="shishi://connect">启动桌面程序</a></div>
-    <p class="hint">主按钮打开本机连接页。服务未启动时，可先启动桌面程序；浏览器可能询问是否打开拾事。连接结果以本机页面的真实读取状态为准。</p>
+    <p class="hint">主按钮打开本机连接页，使用独立的本机数据。若要迁移网页事务，请在下方导出完整备份，再到本机设置导入。服务未启动时先启动桌面程序。</p>
     <button class="text-button pages-download-jump" data-settings-section="pages-desktop">首次使用？下载桌面版 ↓</button>
    </section>
    <section class="panel pages-local-panel" id="pages-deepseek" tabindex="-1" aria-labelledby="pages-deepseek-title">
@@ -37,7 +37,7 @@
    <div class="head-actions"><a id="pages-desktop-download" class="button primary" href="https://github.com/wsfsw/shishi/releases/latest/download/Shishi-Windows.zip" download="Shishi-Windows.zip">${icon('download')}直接下载 Windows 桌面版</a><a class="button secondary" href="https://github.com/wsfsw/shishi/releases/latest" target="_blank" rel="noopener noreferrer">版本与备用下载 ↗</a></div>
    <p class="hint">点击直接下载压缩包；下载由 GitHub 提供。包含运行环境，无需另外安装 Node 或 Python。</p>${repoLink}</div>
    <ol class="pages-install-steps" aria-label="桌面版使用步骤"><li><strong>下载并解压</strong><span>保存到固定文件夹，将整个压缩包解压。</span></li><li><strong>启动 Shishi.exe</strong><span>双击程序，拾事将驻留在 Windows 托盘。</span></li><li><strong>返回设置连接</strong><span>点击“连接本机微信”，选择要整理的群聊。</span></li></ol>
-  </section>`;
+  </section>`+renderDataPanel()+renderRunPanel();
 
  };
  renderNotifications=()=>header('页面打开时，及时想起','提醒','这里只记录当前浏览器的事务提醒；关闭页面不再检查，全天事项按北京时间 09:00 提醒。')+'<div class="panel">'+(state.notifications.length?state.notifications.map(n=>'<div class="notification-row"><div class="task-main"><h3>'+esc(n.title)+'</h3><p>'+esc(n.body)+'</p><div class="task-meta">'+fmt(n.created_at)+(n.read?'':' · 未读')+'</div></div>'+(n.read?'':'<button class="text-button" data-read="'+esc(n.id)+'">已读</button>')+'</div>').join(''):empty('目前没有网页提醒','新增带日期的事务并确认加入日历，保持页面打开即可检查提醒。'))+'</div>';

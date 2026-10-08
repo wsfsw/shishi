@@ -84,5 +84,22 @@ test('本机接口：群聊选择、来源校验、CSRF 与日历导出',async()
  assert.equal((await post('/api/tasks/status',{id:bulkIds[0],status:'inbox'})).status,400);
  assert.equal((await post('/api/tasks/bulk',{ids:bulkIds,action:'restore'})).status,200);
  const restoredState=await (await fetch(base+'/api/state',{headers:{Cookie:cookie}})).json();assert.equal(restoredState.tasks.find(t=>t.id===bulkIds[0]).status,'pending');assert.equal(restoredState.tasks.find(t=>t.id===localTask.id).status,'inbox');
+
+ const taskId=state.tasks[0].id;
+ assert.equal((await post('/api/tasks/save',{id:taskId,title:'开会',category:'会议',dueAt:'2099-10-09T15:00:00+08:00',status:'pending',deadlineAt:'2099-10-12',durationMinutes:45,project:'测试项目',tags:['测试'],repeat:'weekly'})).status,200);
+ assert.equal((await post('/api/tasks/bulk',{ids:[taskId],action:'reschedule',options:{dueAt:'2099-10-10'}})).status,200);
+ const enriched=(await (await fetch(base+'/api/state',{headers:{Cookie:cookie}})).json()).tasks.find(t=>t.id===taskId);
+ assert.equal(enriched.deadlineAt,'2099-10-12');assert.equal(enriched.durationMinutes,45);assert.equal(enriched.repeat,'weekly');
+ assert.equal((await fetch(base+'/api/data/export')).status,401);
+ assert.equal((await fetch(base+'/api/data/export',{headers:agent})).status,400);
+ const backup=await (await fetch(base+'/api/data/export',{headers:{Cookie:cookie}})).json();
+ assert(backup.tables.messages.length);assert(backup.tables.problems.length);assert(!('settings' in backup.tables));assert(!JSON.stringify(backup).includes(token));
+ assert.equal((await post('/api/data/import',{backup},agent)).status,400);
+ assert.equal((await post('/api/data/import',{backup},{...browser,Origin:'https://invalid'})).status,403);
+ assert.equal((await (await post('/api/data/preview',{backup})).json()).tasks,0);
+ assert.equal((await post('/api/data/import',{backup})).status,200);
+ const backups=await (await fetch(base+'/api/data/backups',{headers:{Cookie:cookie}})).json();assert(backups.files.some(f=>f.startsWith('before-import-')));
+ assert.equal((await post('/api/data/automatic-export',{name:'../agent-token'})).status,400);
+ assert.equal((await post('/api/data/automatic-export',{name:backups.files[0]})).status,200);
  }finally{child.kill();await new Promise(r=>child.once('exit',r));rmSync(dir,{recursive:true,force:true});}
 });

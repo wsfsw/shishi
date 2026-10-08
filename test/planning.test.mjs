@@ -77,3 +77,14 @@ test('自动排期保持步骤顺序，不将后续步骤塞到前一步之前',
   assert.equal(draft.assignments[0].dueAt,'2099-10-09T18:00:00+08:00');assert.equal(draft.assignments[1].dueAt,'2099-10-10T18:00:00+08:00');
  }finally{store.db.close();}
 });
+
+
+test('复盘完成重复事务时生成下一次，重复反馈不会重复新增',async()=>{
+ const {store,planner,id}=await setup();try{
+  const draft=await generate(planner,id);planner.confirm({solutionId:draft.id,baseFingerprint:draft.baseFingerprint});
+  const first=store.listTasks().find(t=>t.title==='准备材料');store.updateTask({...first,repeat:'daily',durationMinutes:30});
+  const input={problemId:id,note:'已完成今天的准备',outcome:'unresolved',progress:[{taskId:first.id,progress:'done',actualMinutes:30,difficulty:''}]};
+  planner.feedback(input);planner.feedback(input);
+  assert.equal(store.listTasks().length,3);assert.equal(store.listTasks().find(t=>t.repeatSeriesId===first.id).dueAt,'2099-10-09T18:00:00+08:00');
+ }finally{store.db.close();}
+});

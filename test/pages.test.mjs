@@ -5,6 +5,9 @@ import vm from 'node:vm';
 import {randomUUID} from 'node:crypto';
 import initSqlJs from 'sql.js';
 import {browserShared,browserPlanner} from '../scripts/browser-shared.mjs';
+import {createStore} from '../store.mjs';
+import {createPlanner} from '../planning.mjs';
+import {exportBackup,importBackup} from '../backup.mjs';
 function browser(fetchImpl,storage=new Map()){const context=vm.createContext({window:{},initSqlJs:()=>initSqlJs(),document:{baseURI:'https://example.test/'},URL,TextDecoder,atob,btoa,Uint8Array,crypto:{randomUUID},URLSearchParams,AbortController,AbortSignal,fetch:fetchImpl||(()=>{throw new Error('Unexpected network call');}),localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)}});vm.runInContext(browserShared(),context);vm.runInContext(browserPlanner(),context);for(const file of ['pages-planner.js','pages-ai.js','pages-runtime.js'])vm.runInContext(fs.readFileSync(new URL('../web/'+file,import.meta.url),'utf8'),context);return {runtime:context.window.ShishiPages,storage};}
 test('网页从空数据开始，拒绝自动微信读取；没有预置账号和密钥',async()=>{
  const {runtime,storage}=browser();const state=await runtime.request('/api/state');assert.equal(state.tasks.length,0);assert.equal(state.settings.groups.length,0);assert.equal(state.settings.ai.configured,false);assert.equal(state.settings.syncEnabled,false);assert.equal(storage.size,0);
@@ -13,6 +16,24 @@ test('网页从空数据开始，拒绝自动微信读取；没有预置账号�
  assert.equal(storage.size,0);
 });
 function response(content){return {ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify(content)}}]})};}
+test('网页与桌面完整备份双向迁移；恢复原文、方案和提醒，不保存凭据，不覆盖修改',async()=>{
+ const source=createStore(':memory:');createPlanner(source);source.setSetting('deepseekSecret','never-export-this');
+ source.ingest({group:'合成迁移来源',messages:[{id:'transfer-source',text:'保留来源',sender:'测试',sentAt:'2099-10-08'}],tasks:[{title:'迁移事务',category:'文件',sourceIds:['transfer-source']}]});
+ const t=source.listTasks()[0];source.updateTask({...t,dueAt:'2099-10-09T15:00:00+08:00',status:'pending',deadlineAt:'2099-10-10',durationMinutes:45,project:'课题',tags:['重要'],repeat:'weekly'});
+ const {runtime,storage}=browser();const snapshot=exportBackup(source);
+ const preview=await runtime.request('/api/data/preview',{backup:snapshot});assert.equal(preview.tasks,1);
+ await runtime.request('/api/data/import',{backup:snapshot});let state=await runtime.request('/api/state');assert.equal(state.tasks[0].durationMinutes,45);assert.equal(state.tasks[0].deadlineAt,'2099-10-10');assert.equal(state.tasks[0].repeat,'weekly');assert.equal(state.runs.length,1);assert.equal(state.settings.ai.configured,false);
+ await runtime.request('/api/tasks/save',{...state.tasks[0],title:'网页修改'});
+ await runtime.request('/api/data/import',{backup:snapshot});state=await runtime.request('/api/state');assert.equal(state.tasks[0].title,'网页修改');
+ const restored=browser(undefined,storage).runtime;assert.equal((await restored.request('/api/state')).tasks[0].durationMinutes,45);
+ const value=await restored.request('/api/data/export');assert(!JSON.stringify(value).includes('never-export-this'));const target=createStore(':memory:');createPlanner(target);importBackup(target,value);assert.equal(target.getTask(t.id).title,'网页修改');assert.equal(target.getTask(t.id).durationMinutes,45);assert.equal(target.db.prepare('SELECT text FROM messages WHERE id=?').get('transfer-source').text,'保留来源');
+ assert((await runtime.request('/api/data/backups')).files.includes('before-import'));source.db.close();target.db.close();
+});
+test('网页完成重复任务只生成一次，保留时长，批量改期不改截止',async()=>{
+ const {runtime}=browser(),a=await runtime.request('/api/tasks/save',{title:'重复练习',status:'pending',dueAt:'2099-01-31',deadlineAt:'2099-02-01',repeat:'monthly',durationMinutes:35});
+ await runtime.request('/api/tasks/status',{id:a.id,status:'done'});await runtime.request('/api/tasks/status',{id:a.id,status:'done'});let tasks=(await runtime.request('/api/state')).tasks;assert.equal(tasks.length,2);const next=tasks.find(t=>t.id!==a.id);assert.equal(next.dueAt,'2099-02-28');assert.equal(next.durationMinutes,35);
+ await runtime.request('/api/tasks/bulk',{ids:[next.id],action:'reschedule',options:{dueAt:'2099-03-02'}});tasks=(await runtime.request('/api/state')).tasks;assert.equal(tasks.find(t=>t.id===a.id).deadlineAt,'2099-02-01');assert.equal(tasks.find(t=>t.id===next.id).durationMinutes,35);
+});
 const jobInput={kind:'chat',input:{group:'合成测试资料',messages:[{sender:'测试',text:'2099年10月8日14:30开会',sentAt:'2099-10-07'}]}};
 function extracted(options){const source=JSON.parse(options.body).messages[1].content,ids=JSON.parse(source).messages.map(m=>m.id);return response({tasks:[{title:'合成测试会议',category:'会议',dueAt:'2099-10-08T14:30:00+08:00',precision:'minute',audience:'all',priority:'normal',sourceIds:ids,reason:'合成测试'}],summaries:[{category:'会议',text:'合成摘要',sourceIds:ids}]});}
 async function settle(){await new Promise(resolve=>setImmediate(resolve));}
